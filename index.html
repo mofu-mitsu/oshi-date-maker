@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- メタタグ・OGP設定 -->
+    <title>推しとおでかけプランメーカー</title>
+    <meta name="description" content="推しとの理想のデートプランを自動生成♡あなただけの胸キュンな1日を作ろう！">
+    
+    <meta property="og:title" content="推しとおでかけプランメーカー">
+    <meta property="og:description" content="推しとの理想のデートプランを自動生成♡あなただけの胸キュンな1日を作ろう！">
+    <meta property="og:type" content="website">
+    <!-- ↓ URLは自分のものに変えてね -->
+    <meta property="og:url" content="https://mofu-mitsu.github.io/oshi-date-maker/">
+    <!-- ↓ OGP画像ができたらここを変えてね -->
+    <meta property="og:image" content="https://mofu-mitsu.github.io/oshi-date-maker/ogp.png">
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <!-- ファビコン -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+
+    <!-- ライブラリ読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- フォント：手書き風「Yomogi」を使用 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Yomogi&family=Zen+Maru+Gothic:wght@500;700&display=swap');
+
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: #f0f8ff; /* 薄い空色 */
+            background-image: 
+                linear-gradient(90deg, rgba(255,255,255,0.5) 50%, transparent 50%),
+                linear-gradient(rgba(255,255,255,0.5) 50%, transparent 50%);
+            background-size: 40px 40px; /* 方眼紙っぽい背景 */
+            color: #555;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            color: #5d9bc8;
+            font-family: 'Yomogi', cursive;
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 5px;
+            background: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 3px 3px 0 #bae6fd;
+            border: 2px solid #5d9bc8;
+            transform: rotate(-2deg); /* ちょっと傾けて手作り感 */
+        }
+
+        .subtitle {
+            font-family: 'Yomogi', cursive;
+            font-size: 0.9rem;
+            color: #777;
+            margin-bottom: 25px;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        /* --- 入力エリア --- */
+        .editor {
+            flex: 1;
+            min-width: 280px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-top: 10px solid #a5d8ff; /* 上部にテープ風の色 */
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #5d9bc8;
+            font-family: 'Yomogi', cursive;
+            font-size: 1.1rem;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background: #fafafa;
+        }
+        
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #a5d8ff;
+            background: #fff;
+        }
+
+        button.generate-btn {
+            width: 100%;
+            padding: 15px;
+            background: #8ec5fc;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #5d9bc8;
+            transition: transform 0.1s;
+            margin-top: 10px;
+        }
+        
+        button.generate-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #5d9bc8;
+        }
+
+        /* --- 結果カードエリア（スクラップブック風） --- */
+        .preview-area {
+            flex: 1;
+            min-width: 320px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #date-card {
+            width: 320px;
+            /* ノートの紙っぽいテクスチャ */
+            background: #fff; 
+            background-image: repeating-linear-gradient(#fff 0px, #fff 24px, #e0f2fe 25px);
+            padding: 20px 20px 40px; /* 下を長めに */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+            box-sizing: border-box;
+            font-family: 'Yomogi', cursive;
+            color: #444;
+            /* リングノート風の穴 */
+            border-left: 10px solid #f0f8ff; 
+        }
+
+        /* マスキングテープ装飾 */
+        #date-card::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%) rotate(1deg);
+            width: 120px;
+            height: 25px;
+            background: rgba(255, 200, 220, 0.6); /* ピンクのマステ */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        #date-card::after {
+            content: '';
+            position: absolute;
+            bottom: 10px;
+            right: -10px;
+            width: 80px;
+            height: 20px;
+            background: rgba(160, 230, 180, 0.6); /* 緑のマステ */
+            transform: rotate(-15deg);
+            z-index: 10;
+        }
+
+        .date-header {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #aaa;
+            padding-bottom: 10px;
+        }
+
+        .oshi-name-display {
+            font-size: 1.4rem;
+            color: #5d9bc8;
+            font-weight: bold;
+        }
+        
+        .plan-title {
+            font-size: 1.1rem;
+            margin: 10px 0;
+            background: #e0f7fa;
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            transform: rotate(-1deg);
+        }
+
+        /* スケジュールリスト */
+        .schedule-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+        }
+
+        .schedule-item {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+
+        .time {
+            background: #5d9bc8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+
+        .action {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* 推しのセリフ */
+        .highlight-box {
+            margin-top: 25px;
+            background: #fff8e1; /* 薄い黄色 */
+            padding: 15px;
+            border-radius: 10px;
+            position: relative;
+            border: 2px solid #ffe082;
+            transform: rotate(1deg);
+        }
+
+        .highlight-box::before {
+            content: '♡';
+            position: absolute;
+            top: -12px;
+            right: -5px;
+            font-size: 1.5rem;
+            color: #ff8ba7;
+        }
+
+        .highlight-text {
+            color: #d81b60;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .watermark {
+            margin-top: 25px;
+            text-align: right;
+            font-size: 0.7rem;
+            color: #aaa;
+        }
+
+        /* --- ボタンエリア --- */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        #btn-save { background: #ffb7c5; color: white; }
+        #btn-share { background: #444; color: white; }
+
+        /* --- フッター --- */
+        .footer-content {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .backtop a {
+            color: #5d9bc8;
+            text-decoration: none;
+            font-weight: bold;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #longpressSaveArea {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .container { flex-direction: column; align-items: center;}
+            .editor, .preview-area { width: 100%; max-width: 320px; }
+            #date-card { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>✈️ 推しとおでかけプランメーカー</h1>
+    <p class="subtitle">推しとの理想のデートプランを提案するよ♡</p>
+
+    <div class="container">
+        <!-- 入力フォーム -->
+        <div class="editor">
+            <div class="input-group">
+                <label>📛 推しの名前</label>
+                <input type="text" id="input-name" placeholder="例：みりんてゃ">
+            </div>
+
+            <div class="input-group">
+                <label>🎢 デートの気分</label>
+                <select id="input-vibe">
+                    <option value="random">おまかせ！</option>
+                    <option value="romantic">ロマンチックに♡</option>
+                    <option value="active">元気に遊ぶ！</option>
+                    <option value="chill">まったりおうち/カフェ</option>
+                    <option value="shopping">お買い物＆食べ歩き</option>
+                </select>
+            </div>
+
+            <button class="generate-btn" onclick="generatePlan()">💘 プランを作成！</button>
+            
+            <div class="action-buttons">
+                <button id="btn-save" class="action-btn"><i class="fa-solid fa-camera"></i> 保存</button>
+                <button id="btn-share" class="action-btn"><i class="fa-solid fa-share-nodes"></i> 共有</button>
+            </div>
+        </div>
+
+        <!-- 結果表示（手帳風） -->
+        <div class="preview-area">
+            <div id="date-card">
+                <div class="date-header">
+                    <div style="font-size:0.8rem; color:#888;">DATE PLAN with</div>
+                    <div class="oshi-name-display" id="card-name">推しの名前</div>
+                </div>
+
+                <div style="text-align:center;">
+                    <span class="plan-title" id="card-title">✨ 理想のデートプラン ✨</span>
+                </div>
+
+                <ul class="schedule-list" id="schedule-list">
+                    <!-- ここにJSでプランが生成されます -->
+                    <li class="schedule-item">
+                        <span class="time">10:00</span>
+                        <span class="action">ここにプランが表示されるよ！<br>名前を入れてボタンを押してね。</span>
+                    </li>
+                </ul>
+
+                <div class="highlight-box">
+                    <div style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">Today's Highlight</div>
+                    <div class="highlight-text" id="card-quote">「どんなデートになるか楽しみだね！」</div>
+                </div>
+
+                <div class="watermark">#推しとデートメーカー</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- スマホ用長押し保存エリア -->
+    <div id="longpressSaveArea"></div>
+
+    <!-- フッター -->
+    <div class="footer-content">
+        <!-- 楽天アフィ -->
+        <div class="rakuten">
+            <a href="https://hb.afl.rakuten.co.jp/hsc/4e9240a2.33577567.3d95c766.8a7897b5/?link_type=pict&ut=eyJwYWdlIjoic2hvcCIsInR5cGUiOiJwaWN0IiwiY29sIjoxLCJjYXQiOiI4NSIsImJhbiI6NDc4OTczLCJhbXAiOmZhbHNlfQ%3D%3D" target="_blank" rel="nofollow sponsored noopener" style="word-wrap:break-word;">
+                <img src="https://hbb.afl.rakuten.co.jp/hsb/4e9240a2.33577567.3d95c766.8a7897b5/?me_id=1&me_adv_id=478973&t=pict" border="0" style="margin:2px; max-width:100%; height:auto; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.05);" alt="" title="">
+            </a>
+        </div>
+
+        <!-- TOPへ戻る -->
+        <div class="backtop">
+            <a href="https://mofu-mitsu.github.io/">
+                <i class="fa-solid fa-house"></i> もふみつ工房 TOPへ戻る
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // デートプランのデータベース（1つのカテゴリに複数のプランを用意したよ！）
+        const scenarios = {
+            romantic: [
+                {
+                    title: "夜景とときめきディナー🌃",
+                    steps: [
+                        { time: "17:00", text: "待ち合わせ場所で、いつもよりおめかしした{name}と合流。" },
+                        { time: "18:00", text: "夜景の見えるレストランでディナー。「これ、美味しいね」と微笑み合う。" },
+                        { time: "20:00", text: "きらきら光るイルミネーションの中を、手を繋いで散歩。" },
+                        { quote: "「帰りたくないな…もう少しだけ、一緒にいてくれる？」" }
+                    ]
+                },
+                {
+                    title: "幻想的な水族館デート🐬",
+                    steps: [
+                        { time: "13:00", text: "水族館前で待ち合わせ。{name}はもうチケットを買って待っててくれた。" },
+                        { time: "14:00", text: "クラゲコーナーの薄暗い照明の中、二人の距離が自然と縮まる。" },
+                        { time: "16:00", text: "イルカショーで水しぶきを浴びて、二人で顔を見合わせて大笑い。" },
+                        { quote: "「はぐれないように、俺/私の裾、掴んでていいよ。」" }
+                    ]
+                },
+                {
+                    title: "星空プラネタリウムデート💫",
+                    steps: [
+                        { time: "18:00", text: "仕事/学校帰りに待ち合わせして、プラネタリウムへ直行。" },
+                        { time: "19:00", text: "満天の星空を見上げながら、暗闇でそっと手が触れ合う。" },
+                        { time: "20:30", text: "感想を語り合いながら、夜風に吹かれて駅まで歩く。" },
+                        { quote: "「あの星みたいにさ、ずっと隣にいられたらいいのにね。」" }
+                    ]
+                }
+            ],
+            active: [
+                {
+                    title: "全力エンジョイ遊園地🎠",
+                    steps: [
+                        { time: "10:00", text: "遊園地のゲート前で集合！「今日は遊び倒すぞ！」と{name}は大はしゃぎ。" },
+                        { time: "12:00", text: "絶叫マシーンに乗って大絶叫。怖がるあなたを見て{name}が爆笑。" },
+                        { time: "15:00", text: "お揃いのカチューシャを買って自撮りタイム。距離が近くてドキドキ。" },
+                        { quote: "「一番の思い出は、アトラクションよりお前/君の笑顔かな。」" }
+                    ]
+                },
+                {
+                    title: "白熱！カラオケデート🎤",
+                    steps: [
+                        { time: "13:00", text: "フリータイムで入室！まずは{name}が流行りの曲で盛り上げる。" },
+                        { time: "15:00", text: "まさかのラブソングを、目を見て歌われて心臓が止まりそうになる。" },
+                        { time: "17:00", text: "喉が枯れるまで歌って、「また来ようね」とハイタッチ。" },
+                        { quote: "「…今の曲の歌詞、俺/私の本音だから。気づいた？」" }
+                    ]
+                },
+                {
+                    title: "バッティング＆スポッチャ⚾",
+                    steps: [
+                        { time: "11:00", text: "スポッチャ集合。動きやすい服の{name}が新鮮でかっこいい/可愛い。" },
+                        { time: "13:00", text: "バッティングで空振りしたあなたに、後ろから手取り足取り教えてくれる。" },
+                        { time: "16:00", text: "ゲームコーナーで対決！負けた方がジュースを奢ることに。" },
+                        { quote: "「手、貸して？…ほら、こうやって持つと上手くいくよ。」" }
+                    ]
+                }
+            ],
+            chill: [
+                {
+                    title: "おうちでまったり映画🎬",
+                    steps: [
+                        { time: "13:00", text: "今日は{name}のおうちでデート。お菓子とジュースを買い込んで集合。" },
+                        { time: "14:00", text: "ソファで肩を寄せ合って映画鑑賞。感動シーンで二人して涙。" },
+                        { time: "17:00", text: "夕飯の買い出しにスーパーへ。「新婚さんみたい」とからかわれる。" },
+                        { quote: "「…ねえ、このまま時間止まればいいのにね。」" }
+                    ]
+                },
+                {
+                    title: "青空ピクニックデート🥪",
+                    steps: [
+                        { time: "11:00", text: "天気のいい公園に集合。{name}がレジャーシートを持ってきてくれた。" },
+                        { time: "12:00", text: "手作りのお弁当を広げる。「これ美味い！」と{name}も大喜び。" },
+                        { time: "14:00", text: "芝生に寝転がって、流れる雲を見ながら将来の話をする。" },
+                        { quote: "「なんか幸せだなあ。…お前/君といると、すごく落ち着く。」" }
+                    ]
+                },
+                {
+                    title: "図書館＆本屋さん巡り📚",
+                    steps: [
+                        { time: "14:00", text: "静かな図書館で待ち合わせ。お互いのおすすめの本を探し合う。" },
+                        { time: "15:00", text: "隣同士で読書タイム。ふと視線を感じて見ると{name}と目が合う。" },
+                        { time: "17:00", text: "カフェで読んだ本の感想会。知的な一面に改めて惚れ直す。" },
+                        { quote: "「今度は俺/私がおすすめした本、読んでみてよ。絶対好きだと思う。」" }
+                    ]
+                }
+            ],
+            shopping: [
+                {
+                    title: "古着屋＆カフェ巡り☕",
+                    steps: [
+                        { time: "11:00", text: "おしゃれな街で待ち合わせ。「その服いいね」と褒められる。" },
+                        { time: "13:00", text: "古着屋さん巡り。お互いに似合う服を選んで試着大会。" },
+                        { time: "16:00", text: "歩き疲れてカフェへ。シェアしたケーキのクリームが口に付いて笑われる。" },
+                        { quote: "「俺/私の好みの服、わかってきた？…すっごく似合ってるよ。」" }
+                    ]
+                },
+                {
+                    title: "IKEAで妄想デート🪑",
+                    steps: [
+                        { time: "13:00", text: "大型家具店へ。「将来こんな部屋に住みたいね」とソファに座る。" },
+                        { time: "15:00", text: "キッチンコーナーで「朝ごはんはパン派？」なんて新婚ごっこ。" },
+                        { time: "17:00", text: "出口で50円ソフトクリームを食べて、「また来よう」と約束。" },
+                        { quote: "「いつか本当に、二人で家具選びに来れたらいいね。」" }
+                    ]
+                },
+                {
+                    title: "夏祭り＆食べ歩き🍧",
+                    steps: [
+                        { time: "17:00", text: "神社の夏祭りへ。浴衣姿の{name}にドキッとして言葉が出ない。" },
+                        { time: "18:00", text: "たこ焼きとかき氷を半分こ。「あーん」されて周りの視線が痛いけど幸せ。" },
+                        { time: "20:00", text: "人混みではぐれないように、小指だけそっと繋いで花火を見る。" },
+                        { quote: "「来年も、再来年も、隣で花火見たいな。…いい？」" }
+                    ]
+                }
+            ]
+        };
+
+        // プラン生成機能
+        function generatePlan() {
+            const name = document.getElementById('input-name').value || "推し";
+            const vibe = document.getElementById('input-vibe').value;
+            
+            // カテゴリのキーを取得
+            let categoryKey = vibe;
+            if (vibe === 'random') {
+                const keys = Object.keys(scenarios);
+                categoryKey = keys[Math.floor(Math.random() * keys.length)];
+            }
+
+            // そのカテゴリの中からランダムに1つのプランを選ぶ
+            const planList = scenarios[categoryKey];
+            const plan = planList[Math.floor(Math.random() * planList.length)];
+
+            // 画面への反映
+            document.getElementById('card-name').innerText = name;
+            document.getElementById('card-title').innerText = plan.title; // タイトルもデータから取得
+
+            // リストの生成
+            const listEl = document.getElementById('schedule-list');
+            listEl.innerHTML = ''; // リセット
+
+            // stepsをループ
+            plan.steps.forEach(step => {
+                if(step.time) { // 時間がある通常のステップ
+                    const li = document.createElement('li');
+                    li.className = 'schedule-item';
+                    const text = step.text.replace(/{name}/g, name);
+                    
+                    li.innerHTML = `
+                        <span class="time">${step.time}</span>
+                        <span class="action">${text}</span>
+                    `;
+                    listEl.appendChild(li);
+                } else if(step.quote) { // 最後のセリフ（データ構造的に分けたほうが綺麗だけど今回はstepsの最後に入ってる場合もあるので対応）
+                     // 今回のデータ構造ではquoteはstepsの外に出したのでここは通らない想定だけど念のため
+                }
+            });
+
+            // 最後のセリフ（stepsの最後の要素にあるquoteを使う）
+            const lastStep = plan.steps[plan.steps.length - 1];
+            if(lastStep.quote) {
+                 const quoteText = lastStep.quote.replace(/{name}/g, name);
+                 document.getElementById('card-quote').innerText = quoteText;
+            }
+        }
+
+        // --- 保存・共有機能 ---
+        document.getElementById('btn-save').addEventListener('click', function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中...';
+            btn.disabled = true;
+
+            html2canvas(document.getElementById('date-card'), {
+                scale: 3, 
+                backgroundColor: null,
+                useCORS: true
+            }).then(canvas => {
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (!isMobile) {
+                    const link = document.createElement('a');
+                    link.download = `oshi-date-${Date.now()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                } else {
+                    const area = document.getElementById('longpressSaveArea');
+                    area.style.display = 'block';
+                    area.innerHTML = '<p style="color:#5d9bc8;font-weight:bold;margin-bottom:10px;">👇 画像を長押しして「写真に保存」してね♡</p>';
+                    const img = new Image();
+                    img.src = canvas.toDataURL('image/png');
+                    img.style.maxWidth = '100%';
+                    img.style.borderRadius = '10px';
+                    img.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                    area.appendChild(img);
+                    area.scrollIntoView({behavior: 'smooth'});
+                }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        });
+
+        document.getElementById('btn-share').addEventListener('click', async function() {
+            const name = document.getElementById('input-name').value || "推し";
+            // 今表示されているタイトルを取得
+            const currentTitle = document.getElementById('card-title').innerText;
+            const shareData = {
+                title: '推しとおでかけプランメーカー',
+                text: `${name}との「${currentTitle}」を作ったよ！\n#推しとデートメーカー`,
+                url: location.href
+            };
+
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (err) {
+                    console.log('Cancelled', err);
+                }
+            } else {
+                alert('URLをコピーしました！SNSに貼り付けてね♡');
+                navigator.clipboard.writeText(location.href);
+            }
+        });
+
+        // ページ読み込み時
+        window.onload = function() {
+            generatePlan();
+        };
+
+    </script>
+</body>
+</html>
